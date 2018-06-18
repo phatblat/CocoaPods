@@ -644,7 +644,7 @@ module Pod
           def create_module_map(native_target)
             return super(native_target) unless custom_module_map
 
-            path = target.module_map_path
+            path = Target.instance_method(:module_map_path).bind(target).call
             UI.message "- Copying module map file to #{UI.path(path)}" do
               contents = custom_module_map.read
               unless target.requires_frameworks?
@@ -653,6 +653,11 @@ module Pod
               generator = Generator::Constant.new(contents)
               update_changed_file(generator, path)
               add_file_to_support_group(path)
+
+              if path != (linked_path = target.module_map_path)
+                linked_path.dirname.mkpath
+                FileUtils.ln_sf(path, linked_path)
+              end
 
               native_target.build_configurations.each do |c|
                 relative_path = path.relative_path_from(sandbox.root)
@@ -776,6 +781,11 @@ module Pod
           # @return [Void]
           #
           def add_swift_static_library_compatibility_header_phase(native_target)
+            if custom_module_map
+              raise Informative, 'Using swift static libraries with custom module maps does not yet work.' \
+                                 "Please build #{pod_target.label} as a framework or remove the custom module map for the time being."
+            end
+
             build_phase = native_target.new_shell_script_build_phase('Copy generated compatibility header')
 
             relative_module_map_path = target.module_map_path.relative_path_from(target.sandbox.root)
