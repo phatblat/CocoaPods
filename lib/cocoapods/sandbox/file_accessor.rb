@@ -413,9 +413,7 @@ module Pod
       #
       def expanded_paths(patterns, options = {})
         return [] if patterns.empty?
-        result = []
-        result << path_list.glob(patterns, options)
-        result.flatten.compact.uniq
+        path_list.glob(patterns, options).flatten.compact.uniq
       end
 
       # @param  [Pathname] binary

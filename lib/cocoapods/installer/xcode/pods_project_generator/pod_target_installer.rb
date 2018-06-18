@@ -6,21 +6,20 @@ module Pod
         # relative support files.
         #
         class PodTargetInstaller < TargetInstaller
-          # @return [Hash{Pathname => Pathname}] A hash of all umbrella headers, grouped by the directory
-          #         the are stored in. This can be `nil` if there is no grouping.
+          # @return [Pathname] The directory in which umbrella headers are stored
           #
-          attr_reader :umbrella_headers_by_dir
+          attr_reader :umbrella_headers_dir
 
           # Initialize a new instance
           #
           # @param [Sandbox] sandbox @see TargetInstaller#sandbox
           # @param [Pod::Project] project @see TargetInstaller#project
           # @param [Target] target @see TargetInstaller#target
-          # @param [Hash{Pathname => Pathname}] umbrella_headers_by_dir @see #umbrella_headers_by_dir
+          # @param [Pathname] umbrella_headers_dir @see #umbrella_headers_dir
           #
-          def initialize(sandbox, project, target, umbrella_headers_by_dir = nil)
+          def initialize(sandbox, project, target, umbrella_headers_dir = nil)
             super(sandbox, project, target)
-            @umbrella_headers_by_dir = umbrella_headers_by_dir
+            @umbrella_headers_dir = umbrella_headers_dir
           end
 
           # Creates the target in the Pods project and the relative support files.
@@ -98,6 +97,7 @@ module Pod
                 end
               end
               create_dummy_source(native_target)
+              clean_support_files_temp_dir
               TargetInstallationResult.new(target, native_target, resource_bundle_targets, test_native_targets,
                                            test_resource_bundle_targets, test_app_host_targets)
             end
@@ -232,6 +232,7 @@ module Pod
                 true => file_accessor.arc_source_files,
                 false => file_accessor.non_arc_source_files,
               }.each do |arc, files|
+                next if files.empty?
                 files = files - headers - other_source_files
                 flags = compiler_flags_for_consumer(consumer, arc)
                 regular_file_refs = project_file_references_array(files, 'source')
@@ -669,9 +670,9 @@ module Pod
           end
 
           def module_map_additional_headers
-            return [] unless umbrella_headers_by_dir
+            return [] unless umbrella_headers_dir
 
-            other_paths = umbrella_headers_by_dir[target.module_map_path.dirname] - [target.umbrella_header_path]
+            other_paths = umbrella_headers_dir - [target.umbrella_header_path]
             other_paths.map do |module_map_path|
               # exclude other targets umbrella headers, to avoid
               # incomplete umbrella warnings
