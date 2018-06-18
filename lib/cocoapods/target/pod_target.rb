@@ -331,12 +331,10 @@ module Pod
     #
     def module_map_path
       basename = "#{label}.modulemap"
-      if requires_frameworks?
+      if requires_frameworks? || file_accessors.none?(&:module_map)
         super
-      elsif file_accessors.any?(&:module_map)
-        build_headers.root + product_module_name + basename
       else
-        sandbox.public_headers.root + product_module_name + basename
+        build_headers.root + product_module_name + basename
       end
     end
 
